@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Whagons Realtime Engine Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .status {
+            font-size: 18px;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .connected {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .disconnected {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .auth-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 5px rgba(102, 126, 234, 0.3);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .connect-btn {
+            background-color: #28a745;
+            color: white;
+        }
+
+        .connect-btn:hover:not(:disabled) {
+            background-color: #218838;
+        }
+
+        .disconnect-btn {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .disconnect-btn:hover:not(:disabled) {
+            background-color: #c82333;
+        }
+
+        .send-btn {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .send-btn:hover:not(:disabled) {
+            background-color: #0056b3;
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .message-section {
+            margin-top: 20px;
+        }
+
+        .input-group {
+            display: flex;
+            margin-bottom: 20px;
+        }
+
+        .input-group input {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px 0 0 5px;
+            font-size: 16px;
+        }
+
+        .input-group button {
+            border-radius: 0 5px 5px 0;
+            border-left: none;
+        }
+
+        .messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 4px;
+            word-wrap: break-word;
+        }
+
+        .system-message {
+            background-color: #e7f3ff;
+            border-left: 4px solid #2196F3;
+        }
+
+        .publication-message {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+        }
+
+        .echo-message {
+            background-color: #d1ecf1;
+            border-left: 4px solid #17a2b8;
+        }
+
+        .error-message {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+        }
+
+        .message-header {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .message-content {
+            font-size: 14px;
+        }
+
+        .insert-operation { color: #28a745; }
+        .update-operation { color: #ffc107; }
+        .delete-operation { color: #dc3545; }
+
+        .tenant-info {
+            background: #e8f5e8;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            border-left: 4px solid #28a745;
+        }
+
+        .auth-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🚀 Whagons Realtime Engine</h1>
+            <p>Connect with your domain and token to receive real-time task updates</p>
+        </div>
+
+        <div id="status" class="status disconnected">
+            Disconnected
+        </div>
+
+        <div class="auth-section">
+            <h3>Authentication</h3>
+            <div class="form-group">
+                <label for="domain">Domain:</label>
+                <input type="text" id="domain" placeholder="e.g., whagons-j4ngonogv9.localhost" 
+                       value="whagons-j4ngonogv9.localhost">
+                <div class="auth-info">Enter your tenant domain (the one from your tenants table)</div>
+            </div>
+            <div class="form-group">
+                <label for="token">Bearer Token:</label>
+                <input type="text" id="token" placeholder="e.g., 1|abcdefghijklmnopqrstuvwxyz">
+                <div class="auth-info">Enter your Laravel Sanctum token in format: {token_id}|{plain_text_token}</div>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button id="connectBtn" class="connect-btn" onclick="connect()">Connect</button>
+            <button id="disconnectBtn" class="disconnect-btn" onclick="disconnect()" disabled>Disconnect</button>
+        </div>
+
+        <div id="tenantInfo" class="tenant-info" style="display: none;">
+            <strong>Connected to:</strong> <span id="tenantDetails"></span>
+        </div>
+
+        <div class="message-section">
+            <h3>Send Test Message</h3>
+            <div class="input-group">
+                <input type="text" id="messageInput" placeholder="Type a message to test the connection..." disabled>
+                <button id="sendBtn" class="send-btn" onclick="sendMessage()" disabled>Send</button>
+            </div>
+        </div>
+
+        <div class="message-section">
+            <h3>Messages</h3>
+            <div id="messages" class="messages"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.6.1/dist/sockjs.min.js"></script>
+    <script>
+        let sock = null;
+        let isConnected = false;
+
+        function updateStatus(connected, message = '') {
+            const statusDiv = document.getElementById('status');
+            const connectBtn = document.getElementById('connectBtn');
+            const disconnectBtn = document.getElementById('disconnectBtn');
+            const sendBtn = document.getElementById('sendBtn');
+            const messageInput = document.getElementById('messageInput');
+
+            if (connected) {
+                statusDiv.textContent = message || 'Connected ✅';
+                statusDiv.className = 'status connected';
+                connectBtn.disabled = true;
+                disconnectBtn.disabled = false;
+                sendBtn.disabled = false;
+                messageInput.disabled = false;
+            } else {
+                statusDiv.textContent = message || 'Disconnected ❌';
+                statusDiv.className = 'status disconnected';
+                connectBtn.disabled = false;
+                disconnectBtn.disabled = true;
+                sendBtn.disabled = true;
+                messageInput.disabled = true;
+                document.getElementById('tenantInfo').style.display = 'none';
+            }
+            isConnected = connected;
+        }
+
+        function connect() {
+            const domain = document.getElementById('domain').value.trim();
+            const token = document.getElementById('token').value.trim();
+
+            if (!domain) {
+                alert('Please enter a domain');
+                return;
+            }
+
+            if (!token) {
+                alert('Please enter a bearer token');
+                return;
+            }
+
+            // Construct WebSocket URL with authentication parameters
+            const wsUrl = `http://localhost:8082/ws?domain=${encodeURIComponent(domain)}&token=${encodeURIComponent(token)}`;
+            
+            updateStatus(false, 'Connecting...');
+            addMessage('system', 'Connecting to WebSocket...', { domain, token: token.substring(0, 10) + '...' });
+
+            sock = new SockJS(wsUrl);
+
+            sock.onopen = function() {
+                console.log('WebSocket connected');
+                updateStatus(true, 'Connected - Authenticating...');
+            };
+
+            sock.onmessage = function(e) {
+                console.log('Message received:', e.data);
+                
+                try {
+                    const data = JSON.parse(e.data);
+                    handleMessage(data);
+                } catch (error) {
+                    console.error('Failed to parse message:', error);
+                    addMessage('error', 'Failed to parse message', e.data);
+                }
+            };
+
+            sock.onclose = function() {
+                console.log('WebSocket disconnected');
+                updateStatus(false);
+                addMessage('system', 'Connection closed');
+            };
+
+            sock.onerror = function(error) {
+                console.error('WebSocket error:', error);
+                addMessage('error', 'Connection error', error);
+                updateStatus(false, 'Connection Error ❌');
+            };
+        }
+
+        function disconnect() {
+            if (sock) {
+                sock.close();
+                sock = null;
+            }
+            updateStatus(false);
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            
+            if (message && isConnected && sock) {
+                sock.send(message);
+                input.value = '';
+                addMessage('sent', 'Sent message', message);
+            }
+        }
+
+        function handleMessage(data) {
+            switch (data.type) {
+                case 'system':
+                    if (data.operation === 'authenticated') {
+                        updateStatus(true, `Authenticated ✅`);
+                        showTenantInfo(data.data);
+                        addMessage('system', data.message, data.data);
+                    } else {
+                        addMessage('system', data.message, data.data);
+                    }
+                    break;
+                
+                case 'error':
+                    addMessage('error', data.message, data);
+                    if (data.operation === 'auth_error') {
+                        updateStatus(false, 'Authentication Failed ❌');
+                    }
+                    break;
+                
+                case 'echo':
+                    addMessage('echo', data.message, data.data);
+                    break;
+                
+                default:
+                    // Assume it's a publication message
+                    if (data.tenant_name && data.table && data.operation) {
+                        addMessage('publication', data.message, data);
+                    } else {
+                        addMessage('system', 'Unknown message', data);
+                    }
+                    break;
+            }
+        }
+
+        function showTenantInfo(authData) {
+            const tenantInfo = document.getElementById('tenantInfo');
+            const tenantDetails = document.getElementById('tenantDetails');
+            
+            tenantDetails.innerHTML = `
+                <strong>Domain:</strong> ${authData.domain || 'N/A'} | 
+                <strong>Tenant:</strong> ${authData.tenant_name || 'N/A'} | 
+                <strong>User ID:</strong> ${authData.user_id || 'N/A'}
+            `;
+            
+            tenantInfo.style.display = 'block';
+        }
+
+        function addMessage(type, message, data = null) {
+            const messagesDiv = document.getElementById('messages');
+            const messageDiv = document.createElement('div');
+            
+            const timestamp = new Date().toLocaleTimeString();
+            let className = 'message ';
+            
+            switch (type) {
+                case 'system':
+                    className += 'system-message';
+                    break;
+                case 'publication':
+                    className += 'publication-message';
+                    break;
+                case 'echo':
+                    className += 'echo-message';
+                    break;
+                case 'error':
+                    className += 'error-message';
+                    break;
+                default:
+                    className += 'system-message';
+            }
+            
+            messageDiv.className = className;
+            
+            let content = `<div class="message-header">[${timestamp}] ${type.toUpperCase()}</div>`;
+            content += `<div class="message-content">${message}</div>`;
+            
+            if (data && type === 'publication') {
+                content += `<div class="message-content">`;
+                content += `<strong>Tenant:</strong> ${data.tenant_name || 'N/A'} | `;
+                content += `<strong>Table:</strong> ${data.table || 'N/A'} | `;
+                content += `<strong class="${data.operation?.toLowerCase()}-operation">Operation:</strong> ${data.operation || 'N/A'}<br>`;
+                
+                if (data.new_data) {
+                    content += `<strong>New Data:</strong><br><pre>${JSON.stringify(data.new_data, null, 2)}</pre>`;
+                }
+                if (data.old_data) {
+                    content += `<strong>Old Data:</strong><br><pre>${JSON.stringify(data.old_data, null, 2)}</pre>`;
+                }
+                
+                content += `<strong>DB Time:</strong> ${new Date(data.db_timestamp * 1000).toLocaleString()}<br>`;
+                content += `<strong>Client Time:</strong> ${data.client_timestamp}`;
+                content += `</div>`;
+            } else if (data && typeof data === 'object') {
+                content += `<div class="message-content"><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
+            } else if (data) {
+                content += `<div class="message-content"><strong>Data:</strong> ${data}</div>`;
+            }
+            
+            messageDiv.innerHTML = content;
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        // Allow sending messages with Enter key
+        document.getElementById('messageInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Add some example messages on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            addMessage('system', 'Ready to connect! Enter your domain and token above.', 
+                { info: 'Domain should match an entry in your tenants table' });
+        });
+    </script>
+</body>
+</html> 
