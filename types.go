@@ -74,8 +74,10 @@ type SystemMessage struct {
 type RealtimeEngine struct {
 	landlordDB            *sql.DB
 	tenantDBs             map[string]*sql.DB
-	sessions              map[string]sockjs.Session
+	sessions              map[string]sockjs.Session        // Only active sessions that are actually communicating
+	negotiationSessions   map[string]sockjs.Session        // Sessions in negotiation phase
 	authenticatedSessions map[string]*AuthenticatedSession // sessionID -> auth info
+	tokenCache            map[string]*CachedToken          // tokenHash -> cached auth info
 	mutex                 sync.RWMutex
 }
 
@@ -102,4 +104,11 @@ type PersonalAccessToken struct {
 	ExpiresAt     *time.Time `json:"expires_at"`
 	CreatedAt     time.Time  `json:"created_at"`
 	UpdatedAt     time.Time  `json:"updated_at"`
+}
+
+// CachedToken represents a cached authentication result
+type CachedToken struct {
+	AuthSession *AuthenticatedSession
+	ExpiresAt   time.Time
+	Domain      string
 }

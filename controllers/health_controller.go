@@ -14,8 +14,11 @@ type HealthController struct {
 // HealthEngineInterface defines the methods we need from RealtimeEngine for health checks
 type HealthEngineInterface interface {
 	GetConnectedSessionsCount() int
+	GetNegotiationSessionsCount() int
+	GetTotalSessionsCount() int
 	GetTenantDatabasesCount() int
 	IsLandlordConnected() bool
+	GetCacheStats() map[string]int
 }
 
 // NewHealthController creates a new health controller
@@ -34,7 +37,9 @@ func NewHealthController(engine HealthEngineInterface) *HealthController {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/health [get]
 func (hc *HealthController) GetHealth(c *fiber.Ctx) error {
-	sessionCount := hc.engine.GetConnectedSessionsCount()
+	activeSessionCount := hc.engine.GetConnectedSessionsCount()
+	negotiationSessionCount := hc.engine.GetNegotiationSessionsCount()
+	totalSessionCount := hc.engine.GetTotalSessionsCount()
 	tenantCount := hc.engine.GetTenantDatabasesCount()
 	landlordConnected := hc.engine.IsLandlordConnected()
 
@@ -50,10 +55,12 @@ func (hc *HealthController) GetHealth(c *fiber.Ctx) error {
 		"service": "Whagons Realtime Engine",
 		"version": "1.0.0",
 		"data": fiber.Map{
-			"connected_sessions": sessionCount,
-			"tenant_databases":   tenantCount,
-			"landlord_connected": landlordConnected,
-			"uptime":             time.Now().Format(time.RFC3339),
+			"active_sessions":      activeSessionCount,
+			"negotiation_sessions": negotiationSessionCount,
+			"total_sessions":       totalSessionCount,
+			"tenant_databases":     tenantCount,
+			"landlord_connected":   landlordConnected,
+			"uptime":               time.Now().Format(time.RFC3339),
 		},
 	}
 
@@ -69,20 +76,26 @@ func (hc *HealthController) GetHealth(c *fiber.Ctx) error {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/metrics [get]
 func (hc *HealthController) GetMetrics(c *fiber.Ctx) error {
-	sessionCount := hc.engine.GetConnectedSessionsCount()
+	activeSessionCount := hc.engine.GetConnectedSessionsCount()
+	negotiationSessionCount := hc.engine.GetNegotiationSessionsCount()
+	totalSessionCount := hc.engine.GetTotalSessionsCount()
 	tenantCount := hc.engine.GetTenantDatabasesCount()
 	landlordConnected := hc.engine.IsLandlordConnected()
+	cacheStats := hc.engine.GetCacheStats()
 
 	response := fiber.Map{
 		"status": "success",
 		"metrics": fiber.Map{
 			"sessions": fiber.Map{
-				"connected_count": sessionCount,
+				"active_count":      activeSessionCount,
+				"negotiation_count": negotiationSessionCount,
+				"total_count":       totalSessionCount,
 			},
 			"databases": fiber.Map{
 				"tenant_count":       tenantCount,
 				"landlord_connected": landlordConnected,
 			},
+			"auth_cache": cacheStats,
 			"system": fiber.Map{
 				"uptime":  time.Now().Format(time.RFC3339),
 				"service": "Whagons Realtime Engine",

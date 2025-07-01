@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	_ "github.com/lib/pq"
 )
@@ -17,6 +18,11 @@ func (e *RealtimeEngine) connectToLandlord() error {
 	if err != nil {
 		return fmt.Errorf("failed to open landlord database: %w", err)
 	}
+
+	// Configure connection pool - shared by all clients for tenant lookups
+	db.SetMaxOpenConns(10)                 // Handle more concurrent tenant lookups across all domains
+	db.SetMaxIdleConns(4)                  // Keep more connections alive for quick lookups
+	db.SetConnMaxLifetime(5 * time.Minute) // Recycle connections periodically
 
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("failed to ping landlord database: %w", err)
@@ -69,6 +75,11 @@ func (e *RealtimeEngine) connectToTenant(tenant TenantDB) error {
 	if err != nil {
 		return fmt.Errorf("failed to open tenant database %s: %w", tenant.Database, err)
 	}
+
+	// Configure connection pool - shared by all clients of this tenant
+	db.SetMaxOpenConns(30)                 // Safe max: allows ~3 tenants within PostgreSQL 100-conn limit
+	db.SetMaxIdleConns(10)                 // Keep more connections alive for burst traffic
+	db.SetConnMaxLifetime(5 * time.Minute) // Recycle connections periodically
 
 	if err := db.Ping(); err != nil {
 		return fmt.Errorf("failed to ping tenant database %s: %w", tenant.Database, err)

@@ -13,6 +13,35 @@ import (
 
 // authenticateToken validates a Laravel Sanctum bearer token for a specific tenant domain
 func (e *RealtimeEngine) authenticateTokenForDomain(bearerToken, domain string) (*AuthenticatedSession, error) {
+	// Check cache first
+	if cachedAuth := e.getCachedToken(bearerToken, domain); cachedAuth != nil {
+		log.Printf("✅ Using cached authentication for domain: %s", domain)
+		// Create a copy with new session ID (will be set by caller)
+		return &AuthenticatedSession{
+			TenantName: cachedAuth.TenantName,
+			UserID:     cachedAuth.UserID,
+			TokenID:    cachedAuth.TokenID,
+			Abilities:  cachedAuth.Abilities,
+			ExpiresAt:  cachedAuth.ExpiresAt,
+			LastUsedAt: time.Now(),
+		}, nil
+	}
+
+	// Cache miss - authenticate against database
+	log.Printf("🔍 Cache miss - authenticating against database for domain: %s", domain)
+	authSession, err := e.authenticateTokenForDomainDB(bearerToken, domain)
+	if err != nil {
+		return nil, err
+	}
+
+	// Cache the successful authentication
+	e.cacheToken(bearerToken, domain, authSession)
+
+	return authSession, nil
+}
+
+// authenticateTokenForDomainDB performs the actual database authentication (renamed from original)
+func (e *RealtimeEngine) authenticateTokenForDomainDB(bearerToken, domain string) (*AuthenticatedSession, error) {
 	// First, look up the tenant information from the landlord database
 	tenantInfo, err := e.getTenantByDomain(domain)
 	if err != nil {
@@ -184,4 +213,79 @@ func extractBearerToken(authHeader, queryParam string) string {
 	}
 
 	return ""
+}
+
+// getCachedToken retrieves a cached authentication result
+func (e *RealtimeEngine) getCachedToken(bearerToken, domain string) *AuthenticatedSession {
+	// Create cache key from token hash + domain
+	hasher := sha256.New()
+	hasher.Write([]byte(bearerToken + ":" + domain))
+	cacheKey := hex.EncodeToString(hasher.Sum(nil))
+
+	e.mutex.RLock()
+	cachedToken, exists := e.tokenCache[cacheKey]
+	e.mutex.RUnlock()
+
+	if !exists {
+		return nil
+	}
+
+	// Check if cache entry is expired
+	if time.Now().After(cachedToken.ExpiresAt) {
+		// Remove expired entry
+		e.mutex.Lock()
+		delete(e.tokenCache, cacheKey)
+		e.mutex.Unlock()
+		return nil
+	}
+
+	return cachedToken.AuthSession
+}
+
+// cacheToken stores a successful authentication result
+func (e *RealtimeEngine) cacheToken(bearerToken, domain string, authSession *AuthenticatedSession) {
+	// Create cache key from token hash + domain
+	hasher := sha256.New()
+	hasher.Write([]byte(bearerToken + ":" + domain))
+	cacheKey := hex.EncodeToString(hasher.Sum(nil))
+
+	// Cache for 15 minutes or until token expires (whichever is sooner)
+	cacheExpiry := time.Now().Add(15 * time.Minute)
+	if authSession.ExpiresAt != nil && authSession.ExpiresAt.Before(cacheExpiry) {
+		cacheExpiry = *authSession.ExpiresAt
+	}
+
+	cachedToken := &CachedToken{
+		AuthSession: authSession,
+		ExpiresAt:   cacheExpiry,
+		Domain:      domain,
+	}
+
+	e.mutex.Lock()
+	e.tokenCache[cacheKey] = cachedToken
+	e.mutex.Unlock()
+
+	log.Printf("💾 Cached token for domain %s (expires: %s)", domain, cacheExpiry.Format(time.RFC3339))
+}
+
+// cleanupExpiredTokens removes expired tokens from cache (call periodically)
+func (e *RealtimeEngine) cleanupExpiredTokens() {
+	now := time.Now()
+
+	e.mutex.Lock()
+	var expiredKeys []string
+	for key, cachedToken := range e.tokenCache {
+		if now.After(cachedToken.ExpiresAt) {
+			expiredKeys = append(expiredKeys, key)
+		}
+	}
+
+	for _, key := range expiredKeys {
+		delete(e.tokenCache, key)
+	}
+	e.mutex.Unlock()
+
+	if len(expiredKeys) > 0 {
+		log.Printf("🧹 Cleaned up %d expired cached tokens", len(expiredKeys))
+	}
 }

@@ -1,6 +1,8 @@
 package routes
 
 import (
+	"strings"
+
 	"github.com/desarso/whagonsRealtimeEngine/controllers"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -44,12 +46,19 @@ func SetupRoutes(app *fiber.App, engine EngineInterface) {
 
 // setupMiddleware configures middleware for the Fiber app
 func setupMiddleware(app *fiber.App) {
-	// CORS middleware
-	app.Use(cors.New(cors.Config{
-		AllowOrigins: "*",
-		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
-		AllowHeaders: "Content-Type,Authorization",
-	}))
+	// CORS middleware - exclude /ws/* routes (handled separately)
+	app.Use(func(c *fiber.Ctx) error {
+		if strings.HasPrefix(c.Path(), "/ws/") {
+			return c.Next() // Skip CORS for SockJS routes
+		}
+		return cors.New(cors.Config{
+			AllowOrigins:     "*",
+			AllowMethods:     "GET,POST,PUT,DELETE,OPTIONS,HEAD",
+			AllowHeaders:     "Content-Type,Authorization,X-Requested-With,Accept,Origin,Cache-Control,X-File-Name",
+			AllowCredentials: false,
+			ExposeHeaders:    "Content-Length,Content-Range",
+		})(c)
+	})
 
 	// Request logging middleware
 	app.Use(logger.New(logger.Config{

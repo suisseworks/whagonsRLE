@@ -14,6 +14,8 @@ type SessionController struct {
 // RealtimeEngineInterface defines the methods we need from RealtimeEngine
 type RealtimeEngineInterface interface {
 	GetConnectedSessionsCount() int
+	GetNegotiationSessionsCount() int
+	GetTotalSessionsCount() int
 	DisconnectAllSessions()
 	BroadcastMessage(msgType, operation, message string, data interface{})
 }
@@ -44,13 +46,17 @@ func NewSessionController(engine RealtimeEngineInterface) *SessionController {
 // @Success 200 {object} map[string]interface{}
 // @Router /api/sessions/count [get]
 func (sc *SessionController) GetSessionsCount(c *fiber.Ctx) error {
-	count := sc.engine.GetConnectedSessionsCount()
+	activeCount := sc.engine.GetConnectedSessionsCount()
+	negotiationCount := sc.engine.GetNegotiationSessionsCount()
+	totalCount := sc.engine.GetTotalSessionsCount()
 
 	response := fiber.Map{
 		"status": "success",
 		"data": fiber.Map{
-			"connected_sessions": count,
-			"timestamp":          time.Now().Format(time.RFC3339),
+			"active_sessions":      activeCount,
+			"negotiation_sessions": negotiationCount,
+			"total_sessions":       totalCount,
+			"timestamp":            time.Now().Format(time.RFC3339),
 		},
 	}
 
@@ -67,7 +73,9 @@ func (sc *SessionController) GetSessionsCount(c *fiber.Ctx) error {
 // @Router /api/sessions/disconnect-all [post]
 func (sc *SessionController) DisconnectAllSessions(c *fiber.Ctx) error {
 	// Get count before disconnecting
-	countBefore := sc.engine.GetConnectedSessionsCount()
+	activeCountBefore := sc.engine.GetConnectedSessionsCount()
+	negotiationCountBefore := sc.engine.GetNegotiationSessionsCount()
+	totalCountBefore := sc.engine.GetTotalSessionsCount()
 
 	// Disconnect all sessions
 	sc.engine.DisconnectAllSessions()
@@ -76,8 +84,10 @@ func (sc *SessionController) DisconnectAllSessions(c *fiber.Ctx) error {
 		"status":  "success",
 		"message": "All sessions disconnected",
 		"data": fiber.Map{
-			"sessions_disconnected": countBefore,
-			"timestamp":             time.Now().Format(time.RFC3339),
+			"active_sessions_disconnected":      activeCountBefore,
+			"negotiation_sessions_disconnected": negotiationCountBefore,
+			"total_sessions_disconnected":       totalCountBefore,
+			"timestamp":                         time.Now().Format(time.RFC3339),
 		},
 	}
 
@@ -121,9 +131,11 @@ func (sc *SessionController) BroadcastMessage(c *fiber.Ctx) error {
 	}
 
 	// Get session count before broadcasting
-	sessionCount := sc.engine.GetConnectedSessionsCount()
+	activeSessionCount := sc.engine.GetConnectedSessionsCount()
+	negotiationSessionCount := sc.engine.GetNegotiationSessionsCount()
+	totalSessionCount := sc.engine.GetTotalSessionsCount()
 
-	// Broadcast the message using the simplified interface
+	// Broadcast the message using the simplified interface (only sends to active sessions)
 	sc.engine.BroadcastMessage(requestBody.Type, requestBody.Operation, requestBody.Message, requestBody.Data)
 
 	// Create response message for JSON response
@@ -140,9 +152,11 @@ func (sc *SessionController) BroadcastMessage(c *fiber.Ctx) error {
 		"status":  "success",
 		"message": "Message broadcasted successfully",
 		"data": fiber.Map{
-			"sessions_reached":  sessionCount,
-			"broadcast_message": systemMessage,
-			"timestamp":         time.Now().Format(time.RFC3339),
+			"active_sessions_reached":      activeSessionCount,
+			"negotiation_sessions_ignored": negotiationSessionCount,
+			"total_sessions":               totalSessionCount,
+			"broadcast_message":            systemMessage,
+			"timestamp":                    time.Now().Format(time.RFC3339),
 		},
 	}
 

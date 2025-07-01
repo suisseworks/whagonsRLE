@@ -244,6 +244,10 @@
                 <input type="text" id="token" placeholder="e.g., 1|abcdefghijklmnopqrstuvwxyz">
                 <div class="auth-info">Enter your Laravel Sanctum token in format: {token_id}|{plain_text_token}</div>
             </div>
+            <div style="margin-top: 10px; font-size: 12px; color: #666;">
+                💾 <span id="saveStatus">Values are automatically saved to localStorage</span>
+                <button onclick="clearSavedData()" style="margin-left: 10px; padding: 4px 8px; font-size: 11px; background: #6c757d; color: white; border: none; border-radius: 3px; cursor: pointer;">Clear Saved Data</button>
+            </div>
         </div>
 
         <div class="button-group">
@@ -273,6 +277,48 @@
     <script>
         let sock = null;
         let isConnected = false;
+
+        // Load saved values from localStorage when page loads
+        window.addEventListener('DOMContentLoaded', function() {
+            const savedDomain = localStorage.getItem('whagons_domain');
+            const savedToken = localStorage.getItem('whagons_token');
+            
+            if (savedDomain) {
+                document.getElementById('domain').value = savedDomain;
+            }
+            
+            if (savedToken) {
+                document.getElementById('token').value = savedToken;
+            }
+            
+            console.log('Loaded saved credentials from localStorage');
+        });
+
+        // Save domain to localStorage when user types
+        document.addEventListener('DOMContentLoaded', function() {
+            const domainInput = document.getElementById('domain');
+            const tokenInput = document.getElementById('token');
+            const saveStatus = document.getElementById('saveStatus');
+            
+            function showSavedFeedback() {
+                saveStatus.textContent = 'Saved! ✓';
+                saveStatus.style.color = '#28a745';
+                setTimeout(() => {
+                    saveStatus.textContent = 'Values are automatically saved to localStorage';
+                    saveStatus.style.color = '#666';
+                }, 1500);
+            }
+            
+            domainInput.addEventListener('input', function() {
+                localStorage.setItem('whagons_domain', this.value);
+                showSavedFeedback();
+            });
+            
+            tokenInput.addEventListener('input', function() {
+                localStorage.setItem('whagons_token', this.value);
+                showSavedFeedback();
+            });
+        });
 
         function updateStatus(connected, message = '') {
             const statusDiv = document.getElementById('status');
@@ -373,6 +419,11 @@
 
         function handleMessage(data) {
             switch (data.type) {
+                case 'ping':
+                    // Silently handle server ping messages for health checks
+                    console.log('Received ping from server');
+                    return; // Don't display ping messages
+                    
                 case 'system':
                     if (data.operation === 'authenticated') {
                         updateStatus(true, `Authenticated ✅`);
@@ -486,6 +537,28 @@
             addMessage('system', 'Ready to connect! Enter your domain and token above.', 
                 { info: 'Domain should match an entry in your tenants table' });
         });
+
+        function clearSavedData() {
+            // Clear localStorage
+            localStorage.removeItem('whagons_domain');
+            localStorage.removeItem('whagons_token');
+            
+            // Clear input fields
+            document.getElementById('domain').value = '';
+            document.getElementById('token').value = '';
+            
+            // Update status
+            const saveStatus = document.getElementById('saveStatus');
+            saveStatus.textContent = 'Saved data cleared! ✓';
+            saveStatus.style.color = '#dc3545';
+            
+            setTimeout(() => {
+                saveStatus.textContent = 'Values are automatically saved to localStorage';
+                saveStatus.style.color = '#666';
+            }, 2000);
+            
+            console.log('Cleared saved credentials from localStorage');
+        }
     </script>
 </body>
 </html> 
