@@ -130,7 +130,7 @@ func (e *RealtimeEngine) sendAuthError(session sockjs.Session, message string) {
 }
 
 // broadcastSystemMessage sends a system message to all connected sessions
-func (e *RealtimeEngine) broadcastSystemMessage(message SystemMessage) {
+func (e *RealtimeEngine) BroadcastSystemMessage(message SystemMessage) {
 	e.mutex.RLock()
 	sessions := make(map[string]sockjs.Session)
 	for id, session := range e.sessions {
@@ -166,14 +166,14 @@ func (e *RealtimeEngine) broadcastSystemMessage(message SystemMessage) {
 }
 
 // getConnectedSessionsCount returns the number of currently connected sessions
-func (e *RealtimeEngine) getConnectedSessionsCount() int {
+func (e *RealtimeEngine) GetConnectedSessionsCount() int {
 	e.mutex.RLock()
 	defer e.mutex.RUnlock()
 	return len(e.sessions)
 }
 
 // disconnectAllSessions gracefully disconnects all active sessions
-func (e *RealtimeEngine) disconnectAllSessions() {
+func (e *RealtimeEngine) DisconnectAllSessions() {
 	e.mutex.Lock()
 	sessions := make(map[string]sockjs.Session)
 	for id, session := range e.sessions {
@@ -204,4 +204,30 @@ func (e *RealtimeEngine) disconnectAllSessions() {
 	e.mutex.Unlock()
 
 	log.Printf("📡 All sessions disconnected")
+}
+
+// getTenantDatabasesCount returns the number of connected tenant databases
+func (e *RealtimeEngine) GetTenantDatabasesCount() int {
+	e.mutex.RLock()
+	defer e.mutex.RUnlock()
+	return len(e.tenantDBs)
+}
+
+// IsLandlordConnected checks if the landlord database is connected
+func (e *RealtimeEngine) IsLandlordConnected() bool {
+	return e.landlordDB != nil
+}
+
+// BroadcastMessage is a simplified interface for controllers to broadcast messages
+func (e *RealtimeEngine) BroadcastMessage(msgType, operation, message string, data interface{}) {
+	systemMessage := SystemMessage{
+		Type:      msgType,
+		Operation: operation,
+		Message:   message,
+		Data:      data,
+		Timestamp: time.Now().Format(time.RFC3339),
+		// SessionId will be set per session in BroadcastSystemMessage
+	}
+
+	e.BroadcastSystemMessage(systemMessage)
 }

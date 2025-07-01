@@ -155,7 +155,7 @@ func (e *RealtimeEngine) handlePublicationNotification(tenantName string, notifi
 		pgNotification.Operation, tenantName, pgNotification.Table)
 
 	// Broadcast to all connected SockJS sessions
-	e.broadcastPublicationMessage(message)
+	e.BroadcastPublicationMessage(message)
 }
 
 // getTaskName safely extracts the task name from a TaskRecord
@@ -166,8 +166,8 @@ func getTaskName(task *TaskRecord) string {
 	return task.Name
 }
 
-// broadcastPublicationMessage sends a publication message to authenticated sessions with tenant access
-func (e *RealtimeEngine) broadcastPublicationMessage(message PublicationMessage) {
+// BroadcastPublicationMessage sends a publication message to authenticated sessions with tenant access
+func (e *RealtimeEngine) BroadcastPublicationMessage(message PublicationMessage) {
 	e.mutex.RLock()
 	sessions := make(map[string]sockjs.Session)
 	authSessions := make(map[string]*AuthenticatedSession)
