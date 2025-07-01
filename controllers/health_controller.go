@@ -1,10 +1,9 @@
 package controllers
 
 import (
-	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 // HealthController handles health-related endpoints
@@ -34,21 +33,23 @@ func NewHealthController(engine HealthEngineInterface) *HealthController {
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Router /api/health [get]
-func (hc *HealthController) GetHealth(c *gin.Context) {
+func (hc *HealthController) GetHealth(c *fiber.Ctx) error {
 	sessionCount := hc.engine.GetConnectedSessionsCount()
 	tenantCount := hc.engine.GetTenantDatabasesCount()
 	landlordConnected := hc.engine.IsLandlordConnected()
 
 	status := "healthy"
+	httpStatus := fiber.StatusOK
 	if !landlordConnected {
 		status = "degraded"
+		httpStatus = fiber.StatusServiceUnavailable
 	}
 
-	response := gin.H{
+	response := fiber.Map{
 		"status":  status,
 		"service": "Whagons Realtime Engine",
 		"version": "1.0.0",
-		"data": gin.H{
+		"data": fiber.Map{
 			"connected_sessions": sessionCount,
 			"tenant_databases":   tenantCount,
 			"landlord_connected": landlordConnected,
@@ -56,11 +57,7 @@ func (hc *HealthController) GetHealth(c *gin.Context) {
 		},
 	}
 
-	if status == "healthy" {
-		c.JSON(http.StatusOK, response)
-	} else {
-		c.JSON(http.StatusServiceUnavailable, response)
-	}
+	return c.Status(httpStatus).JSON(response)
 }
 
 // GetMetrics provides detailed metrics endpoint
@@ -71,22 +68,22 @@ func (hc *HealthController) GetHealth(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Router /api/metrics [get]
-func (hc *HealthController) GetMetrics(c *gin.Context) {
+func (hc *HealthController) GetMetrics(c *fiber.Ctx) error {
 	sessionCount := hc.engine.GetConnectedSessionsCount()
 	tenantCount := hc.engine.GetTenantDatabasesCount()
 	landlordConnected := hc.engine.IsLandlordConnected()
 
-	response := gin.H{
+	response := fiber.Map{
 		"status": "success",
-		"metrics": gin.H{
-			"sessions": gin.H{
+		"metrics": fiber.Map{
+			"sessions": fiber.Map{
 				"connected_count": sessionCount,
 			},
-			"databases": gin.H{
+			"databases": fiber.Map{
 				"tenant_count":       tenantCount,
 				"landlord_connected": landlordConnected,
 			},
-			"system": gin.H{
+			"system": fiber.Map{
 				"uptime":  time.Now().Format(time.RFC3339),
 				"service": "Whagons Realtime Engine",
 				"version": "1.0.0",
@@ -94,5 +91,5 @@ func (hc *HealthController) GetMetrics(c *gin.Context) {
 		},
 	}
 
-	c.JSON(http.StatusOK, response)
+	return c.Status(fiber.StatusOK).JSON(response)
 }

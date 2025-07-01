@@ -1,10 +1,9 @@
 package controllers
 
 import (
-	"net/http"
 	"time"
 
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 // SessionController handles session-related endpoints
@@ -44,18 +43,18 @@ func NewSessionController(engine RealtimeEngineInterface) *SessionController {
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Router /api/sessions/count [get]
-func (sc *SessionController) GetSessionsCount(c *gin.Context) {
+func (sc *SessionController) GetSessionsCount(c *fiber.Ctx) error {
 	count := sc.engine.GetConnectedSessionsCount()
 
-	response := gin.H{
+	response := fiber.Map{
 		"status": "success",
-		"data": gin.H{
+		"data": fiber.Map{
 			"connected_sessions": count,
 			"timestamp":          time.Now().Format(time.RFC3339),
 		},
 	}
 
-	c.JSON(http.StatusOK, response)
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
 // DisconnectAllSessions disconnects all active sessions
@@ -66,23 +65,23 @@ func (sc *SessionController) GetSessionsCount(c *gin.Context) {
 // @Produce json
 // @Success 200 {object} map[string]interface{}
 // @Router /api/sessions/disconnect-all [post]
-func (sc *SessionController) DisconnectAllSessions(c *gin.Context) {
+func (sc *SessionController) DisconnectAllSessions(c *fiber.Ctx) error {
 	// Get count before disconnecting
 	countBefore := sc.engine.GetConnectedSessionsCount()
 
 	// Disconnect all sessions
 	sc.engine.DisconnectAllSessions()
 
-	response := gin.H{
+	response := fiber.Map{
 		"status":  "success",
 		"message": "All sessions disconnected",
-		"data": gin.H{
+		"data": fiber.Map{
 			"sessions_disconnected": countBefore,
 			"timestamp":             time.Now().Format(time.RFC3339),
 		},
 	}
 
-	c.JSON(http.StatusOK, response)
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
 // BroadcastMessage sends a message to all connected sessions
@@ -95,24 +94,22 @@ func (sc *SessionController) DisconnectAllSessions(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Router /api/broadcast [post]
-func (sc *SessionController) BroadcastMessage(c *gin.Context) {
+func (sc *SessionController) BroadcastMessage(c *fiber.Ctx) error {
 	var requestBody BroadcastRequest
 
-	if err := c.ShouldBindJSON(&requestBody); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
+	if err := c.BodyParser(&requestBody); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Invalid JSON request body",
 			"error":   err.Error(),
 		})
-		return
 	}
 
 	if requestBody.Message == "" {
-		c.JSON(http.StatusBadRequest, gin.H{
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"status":  "error",
 			"message": "Message field is required",
 		})
-		return
 	}
 
 	// Set default values
@@ -139,17 +136,17 @@ func (sc *SessionController) BroadcastMessage(c *gin.Context) {
 		SessionId: "", // Will be set per session by the engine
 	}
 
-	response := gin.H{
+	response := fiber.Map{
 		"status":  "success",
 		"message": "Message broadcasted successfully",
-		"data": gin.H{
+		"data": fiber.Map{
 			"sessions_reached":  sessionCount,
 			"broadcast_message": systemMessage,
 			"timestamp":         time.Now().Format(time.RFC3339),
 		},
 	}
 
-	c.JSON(http.StatusOK, response)
+	return c.Status(fiber.StatusOK).JSON(response)
 }
 
 // BroadcastRequest represents the request body for broadcasting messages

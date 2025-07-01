@@ -2,7 +2,10 @@ package routes
 
 import (
 	"github.com/desarso/whagonsRealtimeEngine/controllers"
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/gofiber/fiber/v2/middleware/logger"
+	"github.com/gofiber/fiber/v2/middleware/recover"
 )
 
 // EngineInterface combines all the interfaces needed by controllers
@@ -12,57 +15,47 @@ type EngineInterface interface {
 }
 
 // SetupRoutes configures all API routes
-func SetupRoutes(router *gin.Engine, engine EngineInterface) {
+func SetupRoutes(app *fiber.App, engine EngineInterface) {
 	// Create controllers
 	sessionController := controllers.NewSessionController(engine)
 	healthController := controllers.NewHealthController(engine)
 
+	// Add middleware for logging, CORS, and recovery
+	setupMiddleware(app)
+
 	// API v1 group
-	v1 := router.Group("/api")
-	{
-		// Health endpoints
-		health := v1.Group("/health")
-		{
-			health.GET("", healthController.GetHealth)
-		}
+	api := app.Group("/api")
 
-		// Metrics endpoint
-		v1.GET("/metrics", healthController.GetMetrics)
+	// Health endpoints
+	health := api.Group("/health")
+	health.Get("/", healthController.GetHealth)
 
-		// Session management endpoints
-		sessions := v1.Group("/sessions")
-		{
-			sessions.GET("/count", sessionController.GetSessionsCount)
-			sessions.POST("/disconnect-all", sessionController.DisconnectAllSessions)
-		}
+	// Metrics endpoint
+	api.Get("/metrics", healthController.GetMetrics)
 
-		// Broadcasting endpoint
-		v1.POST("/broadcast", sessionController.BroadcastMessage)
-	}
+	// Session management endpoints
+	sessions := api.Group("/sessions")
+	sessions.Get("/count", sessionController.GetSessionsCount)
+	sessions.Post("/disconnect-all", sessionController.DisconnectAllSessions)
 
-	// Add middleware for logging and CORS if needed
-	setupMiddleware(router)
+	// Broadcasting endpoint
+	api.Post("/broadcast", sessionController.BroadcastMessage)
 }
 
-// setupMiddleware configures middleware for the router
-func setupMiddleware(router *gin.Engine) {
+// setupMiddleware configures middleware for the Fiber app
+func setupMiddleware(app *fiber.App) {
 	// CORS middleware
-	router.Use(func(c *gin.Context) {
-		c.Header("Access-Control-Allow-Origin", "*")
-		c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+	app.Use(cors.New(cors.Config{
+		AllowOrigins: "*",
+		AllowMethods: "GET,POST,PUT,DELETE,OPTIONS",
+		AllowHeaders: "Content-Type,Authorization",
+	}))
 
-		if c.Request.Method == "OPTIONS" {
-			c.AbortWithStatus(204)
-			return
-		}
-
-		c.Next()
-	})
-
-	// Request logging middleware (Gin's default logger)
-	router.Use(gin.Logger())
+	// Request logging middleware
+	app.Use(logger.New(logger.Config{
+		Format: "[${time}] ${status} - ${latency} ${method} ${path}\n",
+	}))
 
 	// Recovery middleware
-	router.Use(gin.Recovery())
+	app.Use(recover.New())
 }

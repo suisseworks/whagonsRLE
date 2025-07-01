@@ -5,7 +5,8 @@ import (
 	"log"
 
 	"github.com/desarso/whagonsRealtimeEngine/routes"
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/igm/sockjs-go/v3/sockjs"
 	_ "github.com/lib/pq"
 )
@@ -31,17 +32,20 @@ func main() {
 	// Start listening to publications from tenant databases
 	go engine.startPublicationListeners()
 
-	// Create Gin router
-	router := gin.Default()
+	// Create Fiber app
+	app := fiber.New(fiber.Config{
+		ServerHeader: "Whagons Realtime Engine",
+		AppName:      "Whagons Realtime Engine v1.0.0",
+	})
 
 	// Setup API routes with controllers
-	routes.SetupRoutes(router, engine)
+	routes.SetupRoutes(app, engine)
 
 	// SockJS handler - mount at /ws to match client expectations
 	sockjsHandler := sockjs.NewHandler("/ws", sockjs.DefaultOptions, engine.sockjsHandler)
 
-	// Mount SockJS on Gin router
-	router.Any("/ws/*any", gin.WrapH(sockjsHandler))
+	// Mount SockJS on Fiber app using adaptor
+	app.All("/ws/*", adaptor.HTTPHandler(sockjsHandler))
 
 	// Server startup messages
 	log.Printf("🚀 Whagons Realtime Engine starting...")
@@ -54,6 +58,6 @@ func main() {
 	log.Printf("   POST /api/sessions/disconnect-all - Disconnect all sessions")
 	log.Printf("   POST /api/broadcast - Broadcast message to all sessions")
 
-	// Start HTTP server with Gin
-	log.Fatal(router.Run(":" + config.ServerPort))
+	// Start HTTP server with Fiber
+	log.Fatal(app.Listen(":" + config.ServerPort))
 }
