@@ -12,3 +12,11 @@ publish:
 	@echo $(NEXT_VERSION) > version.txt
 
 .PHONY: publish
+
+
+install:
+	go install github.com/suisseworks/whagonsRLE@latest
+
+install-skip-checksum:
+	GOSUMDB=off go install github.com/suisseworks/whagonsRLE@latest
+	
