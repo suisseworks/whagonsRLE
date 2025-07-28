@@ -46,5 +46,5 @@ make install-skip-checksum
 
 ---
 
-**License:** See LICENSE file  
+**License:** MIT License - see [LICENSE](LICENSE) file  
 **Repository:** [github.com/suisseworks/whagonsRLE](https://github.com/suisseworks/whagonsRLE) 
