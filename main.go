@@ -6,11 +6,11 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/desarso/whagonsRealtimeEngine/routes"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/igm/sockjs-go/v3/sockjs"
 	_ "github.com/lib/pq"
+	"github.com/suisseworks/whagonsRLE/routes"
 )
 
 func main() {
@@ -62,8 +62,8 @@ func main() {
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
-		ServerHeader: "Whagons Realtime Engine",
-		AppName:      "Whagons Realtime Engine v1.0.0",
+		ServerHeader: "WhagonsRLE",
+		AppName:      "WhagonsRLE v1.0.0",
 	})
 
 	// Setup API routes with controllers
@@ -100,7 +100,7 @@ func main() {
 	app.All("/ws/*", adaptor.HTTPHandler(corsWrappedHandler))
 
 	// Server startup messages
-	log.Printf("🚀 Whagons Realtime Engine starting...")
+	log.Printf("🚀 WhagonsRLE starting...")
 	log.Printf("📡 Server listening on port: %s", config.ServerPort)
 	log.Printf("🔌 SockJS WebSocket endpoint: http://localhost:%s/ws", config.ServerPort)
 	log.Printf("📊 API endpoints available:")

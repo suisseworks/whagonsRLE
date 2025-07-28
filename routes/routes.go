@@ -3,11 +3,11 @@ package routes
 import (
 	"strings"
 
-	"github.com/desarso/whagonsRealtimeEngine/controllers"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
+	"github.com/suisseworks/whagonsRLE/controllers"
 )
 
 // EngineInterface combines all the interfaces needed by controllers

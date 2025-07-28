@@ -1,4 +1,4 @@
-module github.com/desarso/whagonsRealtimeEngine
+module github.com/suisseworks/whagonsRLE
 
 go 1.24.3
 
