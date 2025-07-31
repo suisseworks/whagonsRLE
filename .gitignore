@@ -1,3 +1,6 @@
+# Whagons RLE custom config file (contains sensitive data)
+.whagons-config.json
+
 # Environment variables
 .env
 .env.local
