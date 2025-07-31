@@ -49,6 +49,7 @@ type TaskRecord struct {
 
 // PublicationMessage represents a clean publication message for the frontend
 type PublicationMessage struct {
+	Type        string      `json:"type"`
 	TenantName  string      `json:"tenant_name"`
 	Table       string      `json:"table"`
 	Operation   string      `json:"operation"`

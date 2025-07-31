@@ -97,6 +97,7 @@ func (e *RealtimeEngine) handlePublicationNotification(tenantName string, notifi
 
 	// Create clean publication message
 	message := PublicationMessage{
+		Type:        "database",
 		TenantName:  tenantName,
 		Table:       pgNotification.Table,
 		Operation:   pgNotification.Operation,

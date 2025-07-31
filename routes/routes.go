@@ -40,6 +40,11 @@ func SetupRoutes(app *fiber.App, engine EngineInterface) {
 	sessions.Get("/count", sessionController.GetSessionsCount)
 	sessions.Post("/disconnect-all", sessionController.DisconnectAllSessions)
 
+	// Tenant management endpoints
+	tenants := api.Group("/tenants")
+	tenants.Post("/reload", sessionController.ReloadTenants)
+	tenants.Post("/test-notification", sessionController.TestTenantNotification)
+
 	// Broadcasting endpoint
 	api.Post("/broadcast", sessionController.BroadcastMessage)
 }

@@ -36,9 +36,10 @@ func init() {
 		ServerPort: getEnv("SERVER_PORT", "8082"),
 	}
 
-	// Validate required environment variables
+	// Validate environment variables (warn but don't fail)
 	if config.DBPassword == "" {
-		log.Fatal("❌ DB_PASSWORD environment variable is required")
+		log.Println("⚠️  Warning: DB_PASSWORD environment variable is not set")
+		log.Println("🔍 Database connection may fail without proper credentials")
 	}
 
 	log.Println("✅ Environment configuration loaded")

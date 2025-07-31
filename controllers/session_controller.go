@@ -18,6 +18,8 @@ type RealtimeEngineInterface interface {
 	GetTotalSessionsCount() int
 	DisconnectAllSessions()
 	BroadcastMessage(msgType, operation, message string, data interface{})
+	ReloadTenants() error
+	TestTenantNotification() error
 }
 
 // SystemMessage represents system messages for JSON responses
@@ -157,6 +159,66 @@ func (sc *SessionController) BroadcastMessage(c *fiber.Ctx) error {
 			"total_sessions":               totalSessionCount,
 			"broadcast_message":            systemMessage,
 			"timestamp":                    time.Now().Format(time.RFC3339),
+		},
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response)
+}
+
+// ReloadTenants checks for new tenants and connects to them
+// @Summary Reload tenants
+// @Description Checks for new tenants in the landlord database and connects to them
+// @Tags tenants
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/tenants/reload [post]
+func (sc *SessionController) ReloadTenants(c *fiber.Ctx) error {
+	if err := sc.engine.ReloadTenants(); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":    "error",
+			"message":   "Failed to reload tenants",
+			"error":     err.Error(),
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
+	}
+
+	response := fiber.Map{
+		"status":  "success",
+		"message": "Tenants reloaded successfully",
+		"data": fiber.Map{
+			"timestamp": time.Now().Format(time.RFC3339),
+		},
+	}
+
+	return c.Status(fiber.StatusOK).JSON(response)
+}
+
+// TestTenantNotification sends a test notification to verify the landlord listener
+// @Summary Test tenant notification system
+// @Description Sends a test notification to verify the landlord tenant listener is working
+// @Tags tenants
+// @Accept json
+// @Produce json
+// @Success 200 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /api/tenants/test-notification [post]
+func (sc *SessionController) TestTenantNotification(c *fiber.Ctx) error {
+	if err := sc.engine.TestTenantNotification(); err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"status":    "error",
+			"message":   "Failed to send test notification",
+			"error":     err.Error(),
+			"timestamp": time.Now().Format(time.RFC3339),
+		})
+	}
+
+	response := fiber.Map{
+		"status":  "success",
+		"message": "Test notification sent successfully - check logs for confirmation",
+		"data": fiber.Map{
+			"timestamp": time.Now().Format(time.RFC3339),
 		},
 	}
 

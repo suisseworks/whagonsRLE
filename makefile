@@ -19,4 +19,8 @@ install:
 
 install-skip-checksum:
 	GOSUMDB=off go install github.com/suisseworks/whagonsRLE@latest
+
+
+run:
+	air
 	

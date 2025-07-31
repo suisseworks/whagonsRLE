@@ -24,27 +24,31 @@ func main() {
 
 	// Connect to landlord database
 	if err := engine.connectToLandlord(); err != nil {
-		log.Fatalf("❌ Failed to connect to landlord database: %v", err)
-	}
-	defer engine.landlordDB.Close()
+		log.Printf("⚠️  Failed to connect to landlord database: %v", err)
+		log.Println("🔍 Application will start but database operations may fail")
+	} else {
+		defer engine.landlordDB.Close()
 
-	// Load tenant databases
-	if err := engine.loadTenantDatabases(); err != nil {
-		log.Fatalf("❌ Failed to load tenant databases: %v", err)
+		// Load tenant databases
+		if err := engine.loadTenantDatabases(); err != nil {
+			log.Printf("⚠️  Failed to load tenant databases: %v", err)
+			log.Println("🔍 Application will start but tenant operations may be limited")
+		}
 	}
 
-	// Start listening to publications from tenant databases
-	go engine.startPublicationListeners()
+	// Start listening to publications from tenant databases (only if we have database connections)
+	if engine.landlordDB != nil && len(engine.tenantDBs) > 0 {
+		go engine.startPublicationListeners()
+	} else {
+		log.Println("⚠️  Skipping publication listeners due to database connection issues")
+	}
 
 	// Start token cache cleanup routine
 	go func() {
 		ticker := time.NewTicker(5 * time.Minute) // Clean up every 5 minutes
 		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				engine.cleanupExpiredTokens()
-			}
+		for range ticker.C {
+			engine.cleanupExpiredTokens()
 		}
 	}()
 
@@ -52,13 +56,15 @@ func main() {
 	go func() {
 		ticker := time.NewTicker(30 * time.Second) // Clean up every 30 seconds
 		defer ticker.Stop()
-		for {
-			select {
-			case <-ticker.C:
-				engine.cleanupZombieSessions()
-			}
+		for range ticker.C {
+			engine.cleanupZombieSessions()
 		}
 	}()
+
+	// Start listening for tenant changes in landlord database (only if landlord DB is connected)
+	if engine.landlordDB != nil {
+		go engine.listenToLandlordTenantChanges()
+	}
 
 	// Create Fiber app
 	app := fiber.New(fiber.Config{
@@ -108,6 +114,8 @@ func main() {
 	log.Printf("   GET  /api/metrics - System metrics")
 	log.Printf("   GET  /api/sessions/count - Get connected sessions count")
 	log.Printf("   POST /api/sessions/disconnect-all - Disconnect all sessions")
+	log.Printf("   POST /api/tenants/reload - Reload and connect to new tenants")
+	log.Printf("   POST /api/tenants/test-notification - Test tenant notification system")
 	log.Printf("   POST /api/broadcast - Broadcast message to all sessions")
 
 	// Start HTTP server with Fiber
